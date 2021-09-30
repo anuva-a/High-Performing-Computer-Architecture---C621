@@ -1,4 +1,4 @@
-# Computer-Architecture
+# Git Basics for team work
 
 ### Create a new branch
 $ git checkout -b "your branch name"
