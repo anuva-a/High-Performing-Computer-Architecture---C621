@@ -5,10 +5,10 @@ $ git checkout -b "your branch name"
 ### Create a pull request
 $ git status 
 
-$ git add <file>
+$ git add "file"
 
 $ git commit -m "commit message here"
 
-$ git push origin <branch name>
+$ git push origin "branch name"
 
 Click on the link to create the pull request
