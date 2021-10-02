@@ -104,8 +104,8 @@ bool insertBlock(Cache *cache, Request *req, uint64_t access_time, uint64_t *wb_
     uint64_t blk_aligned_addr = blkAlign(req->load_or_store_addr, cache->blk_mask);
 
     Cache_Block *victim = NULL;
-    #ifdef LRU
-        bool wb_required = lru(cache, blk_aligned_addr, &victim, wb_addr);
+    #ifdef LFU
+        bool wb_required = lfu(cache, blk_aligned_addr, &victim, wb_addr);
     #endif
     assert(victim != NULL);
 
@@ -181,6 +181,59 @@ bool lru(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_add
         if (ways[i]->when_touched < victim->when_touched)
         {
             victim = ways[i];
+        }
+    }
+
+    // Step three, need to write-back the victim block
+    *wb_addr = (victim->tag << cache->tag_shift) | (victim->set << cache->set_shift);
+//    uint64_t ori_addr = (victim->tag << cache->tag_shift) | (victim->set << cache->set_shift);
+//    printf("Evicted: %"PRIu64"\n", ori_addr);
+
+    // Step three, invalidate victim
+    victim->tag = UINTMAX_MAX;
+    victim->valid = false;
+    victim->dirty = false;
+    victim->frequency = 0;
+    victim->when_touched = 0;
+
+    *victim_blk = victim;
+
+    return true; // Need to write-back
+}
+
+bool lfu(Cache *cache, uint64_t addr, Cache_Block **victim_blk, uint64_t *wb_addr)
+{
+    uint64_t set_idx = (addr >> cache->set_shift) & cache->set_mask;
+    //    printf("Set: %"PRIu64"\n", set_idx);
+    Cache_Block **ways = cache->sets[set_idx].ways;
+
+    // Step one, try to find an invalid block.
+    int i;
+    for (i = 0; i < cache->num_ways; i++)
+    {
+        if (ways[i]->valid == false)
+        {
+            *victim_blk = ways[i];
+            return false; // No need to write-back
+        }
+    }
+
+    // Step two, if there is no invalid block. Locate the LFU block
+    Cache_Block *victim = ways[0];
+    for (i = 1; i < cache->num_ways; i++)
+    {
+        if (ways[i]->frequency <= victim->frequency)
+        {
+            if (ways[i]->frequency == victim->frequency)
+            {
+                if (ways[i]->when_touched < victim->when_touched)
+                {
+                    victim = ways[i];
+                }
+            }
+            else{
+                victim = ways[i];
+            }
         }
     }
 
