@@ -12,3 +12,6 @@ $ git commit -m "commit message here"
 $ git push origin "branch name"
 
 Click on the link to create the pull request
+
+### Getting updated files
+$ git pull
